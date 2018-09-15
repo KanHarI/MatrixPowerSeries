@@ -7,15 +7,14 @@ import random
 import math
 
 def factorial_decaying_random_init(shape):
-    reals = []
-    imags = []
+    res = np.zeros(shape)
     for i in range(shape[0]):
         radius = random.random() / math.factorial(i)
         theta = random.random() * 2 * math.pi
-        reals.append(radius*math.cos(theta))
-        imags.append(radius*math.sin(theta))
-    return np.array([reals, imags])
+        res[0] = radius*math.cos(theta)
+        res[1] = radius*math.sin(theta)
 
+    return res
 
 class MatrixPowerSeriesLayer(Layer):
     def __init__(self, length, **kwrags):
@@ -40,8 +39,8 @@ class MatrixPowerSeriesLayer(Layer):
         tmp_real = x_real
         tmp_imag = x_imag
 
-        coff_real = self.coefficients[0,:]
-        coff_imag = self.coefficients[1,:]
+        coff_real = self.coefficients[:,0]
+        coff_imag = self.coefficients[:,1]
 
         res_real = self.unit * coff_real[0] + tmp_real * coff_real[1] - tmp_imag * coff_imag[1]
         res_imag = self.unit * coff_imag[0] + tmp_real * coff_imag[1] + tmp_imag * coff_real[1]
@@ -52,7 +51,7 @@ class MatrixPowerSeriesLayer(Layer):
             tmp_real = new_tmp_real
 
             res_real += tmp_real * coff_real[i] - tmp_imag * coff_imag[i]
-            res_imag += tmp_imag * coff_real[i] + tmp_real * coff_real[i]
+            res_imag += tmp_imag * coff_real[i] + tmp_real * coff_imag[i]
 
         res = tf.stack([res_real, res_imag], axis=1)
         return res
@@ -66,12 +65,16 @@ def factorial_decaying_random_initM(shape):
     print(shape)
     res = np.zeros(shape)
     for i in range(shape[0]): # length
+        radius = random.random() / math.factorial(i)
+        theta = random.random() * 2 * math.pi
+        res[i,0,:,:] = radius * math.cos(theta) * np.identity(shape[2])
+        res[i,1,:,:] = radius * math.sin(theta) * np.identity(shape[2])
         for k in range(shape[2]):
             for l in range(shape[3]):
-                radius = random.random() / math.factorial(i)
+                radius = random.random() / (math.factorial(i)**2 * 5)
                 theta = random.random() * 2 * math.pi
-                res[i,0,k,l] = radius*math.cos(theta)
-                res[i,1,k,l] = radius*math.sin(theta)
+                res[i,0,k,l] += radius*math.cos(theta)
+                res[i,1,k,l] += radius*math.sin(theta)
     return res
 
 
@@ -111,8 +114,8 @@ class MatrixMPowerSeriesLayer(Layer):
             tmp_imag = tf.einsum('ijk,ikl->ijl', tmp_real, x_imag) + tf.einsum('ijk,ikl->ijl', tmp_imag, x_real)
             tmp_real = new_tmp_real
 
-            res_real += tmp_real * coff_real[i]
-            res_imag += tmp_imag * coff_imag[i]
+            res_real += tf.einsum('ijk,kl->ijl', tmp_real, coff_real[i]) - tf.einsum('ijk,kl->ijl', tmp_imag, coff_imag[i])
+            res_imag += tf.einsum('ijk,kl->ijl', tmp_real, coff_imag[i]) - tf.einsum('ijk,kl->ijl', tmp_imag, coff_real[i])
 
         res = tf.stack([res_real, res_imag], axis=1)
         return res

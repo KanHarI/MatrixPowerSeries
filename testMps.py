@@ -4,10 +4,13 @@ import numpy as np
 from keras.models import Sequential
 import keras
 
-import Mps
 import KerasMps
 
-def test_zero():
+LR = 1
+DECAY = 0.1
+MOMENTUM = 0.5
+
+def test_zero(epochs=1000):
     data = np.vectorize(complex)(np.random.random((1000,10,10)),np.random.random((1000,10,10)))*2-1-1j
     labels = []
     for datum in data:
@@ -30,16 +33,16 @@ def test_zero():
         KerasMps.MatrixPowerSeriesLayer(5, input_shape=(2,10,10))
         ])
 
-    sgd = keras.optimizers.SGD(lr=0.1, decay=0.01, momentum=0.5, nesterov=True,clipnorm=100)
+    sgd = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM, nesterov=True,clipnorm=100)
     model.compile(optimizer=sgd,
               loss='mse')
 
-    model.fit(kdata, klabels, epochs=1000, batch_size=128)
+    model.fit(kdata, klabels, epochs=epochs, batch_size=128)
     print(model.evaluate(ktest_data, ktest_labels, batch_size=128))
 
     return model
 
-def test_unit():
+def test_unit(epochs=1000):
     data = np.vectorize(complex)(np.random.random((1000,10,10)),np.random.random((1000,10,10)))*2-1-1j
     labels = []
     for datum in data:
@@ -62,17 +65,17 @@ def test_unit():
         KerasMps.MatrixPowerSeriesLayer(5, input_shape=(2,10,10))
         ])
 
-    sgd = keras.optimizers.SGD(lr=0.1, decay=0.01, momentum=0.5, nesterov=True,clipnorm=100)
+    sgd = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM, nesterov=True,clipnorm=100)
     model.compile(optimizer=sgd,
               loss='mse')
 
-    model.fit(kdata, klabels, epochs=1000, batch_size=128)
+    model.fit(kdata, klabels, epochs=epochs, batch_size=128)
     print(model.evaluate(ktest_data, ktest_labels, batch_size=128))
 
     return model
 
 
-def test_id():
+def test_id(epochs=1000):
     data = np.vectorize(complex)(np.random.random((1000,10,10)),np.random.random((1000,10,10)))*2-1-1j
     labels = data
 
@@ -89,21 +92,21 @@ def test_id():
         KerasMps.MatrixPowerSeriesLayer(5, input_shape=(2,10,10))
         ])
 
-    sgd = keras.optimizers.SGD(lr=0.1, decay=0.01, momentum=0.5, nesterov=True,clipnorm=100)
+    sgd = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM, nesterov=True,clipnorm=100)
     model.compile(optimizer=sgd,
               loss='mse')
 
-    model.fit(kdata, klabels, epochs=1000, batch_size=128)
+    model.fit(kdata, klabels, epochs=epochs, batch_size=128)
     print(model.evaluate(ktest_data, ktest_labels, batch_size=128))
 
     return model
 
 
-def test_square():
+def test_square(epochs=1000):
     data = np.vectorize(complex)(np.random.random((1000,10,10)),np.random.random((1000,10,10)))*2-1-1j
     labels = []
     for datum in data:
-        labels.append(datum.dot(datum))
+        labels.append(np.matmul(datum, datum))
     labels = np.array(labels)
 
     kdata = np.array(list(map(lambda x: [x.real, x.imag], data)))
@@ -112,7 +115,7 @@ def test_square():
     test_data = np.vectorize(complex)(np.random.random((100,10,10)),np.random.random((100,10,10)))*2-1-1j
     test_labels = []
     for datum in test_data:
-        test_labels.append(datum.dot(datum))
+        test_labels.append(np.matmul(datum, datum))
     test_labels = np.array(test_labels)
 
     ktest_data = np.array(list(map(lambda x: [x.real, x.imag], test_data)))
@@ -122,17 +125,17 @@ def test_square():
         KerasMps.MatrixPowerSeriesLayer(5, input_shape=(2,10,10))
         ])
 
-    sgd = keras.optimizers.SGD(lr=0.1, decay=0.01, momentum=0.5, nesterov=True,clipnorm=100)
+    sgd = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM, nesterov=True,clipnorm=100)
     model.compile(optimizer=sgd,
               loss='mse')
 
-    model.fit(kdata, klabels, epochs=1000, batch_size=16)
-    print(model.evaluate(ktest_data, ktest_labels, batch_size=10))
+    model.fit(kdata, klabels, epochs=epochs, batch_size=128)
+    print(model.evaluate(ktest_data, ktest_labels, batch_size=128))
 
     return model
 
 
-def test_exp():
+def test_exp(epochs=1000):
     data = np.vectorize(complex)(np.random.random((1000,10,10)),np.random.random((1000,10,10)))*2-1-1j
     labels = []
     for datum in data:
@@ -155,18 +158,18 @@ def test_exp():
         KerasMps.MatrixPowerSeriesLayer(5, input_shape=(2,10,10))
         ])
 
-    sgd = keras.optimizers.SGD(lr=0.1, decay=0.01, momentum=0.5, nesterov=True,clipnorm=100)
+    sgd = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM, nesterov=True,clipnorm=100)
     model.compile(optimizer=sgd,
               loss='mse')
 
-    model.fit(kdata, klabels, epochs=1000, batch_size=16)
-    print(model.evaluate(ktest_data, ktest_labels, batch_size=10))
+    model.fit(kdata, klabels, epochs=epochs, batch_size=128)
+    print(model.evaluate(ktest_data, ktest_labels, batch_size=128))
 
     return model
 
 
 # Matrix coefficients tests
-def test_zero_m():
+def test_zero_m(epochs=1000):
     data = np.vectorize(complex)(np.random.random((1000,10,10)),np.random.random((1000,10,10)))*2-1-1j
     labels = []
     for datum in data:
@@ -189,16 +192,16 @@ def test_zero_m():
         KerasMps.MatrixMPowerSeriesLayer(5, input_shape=(2,10,10))
         ])
 
-    sgd = keras.optimizers.SGD(lr=0.1, decay=0.01, momentum=0.5, nesterov=True,clipnorm=100)
+    sgd = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM, nesterov=True,clipnorm=100)
     model.compile(optimizer=sgd,
               loss='mse')
 
-    model.fit(kdata, klabels, epochs=1000, batch_size=128)
+    model.fit(kdata, klabels, epochs=epochs, batch_size=128)
     print(model.evaluate(ktest_data, ktest_labels, batch_size=128))
 
     return model
 
-def test_unit_m():
+def test_unit_m(epochs=1000):
     data = np.vectorize(complex)(np.random.random((1000,10,10)),np.random.random((1000,10,10)))*2-1-1j
     labels = []
     for datum in data:
@@ -218,20 +221,20 @@ def test_unit_m():
     ktest_labels = np.array(list(map(lambda x: [x.real, x.imag], test_labels)))
 
     model = Sequential([
-        KerasMps.MatrixPowerSeriesLayer(5, input_shape=(2,10,10))
+        KerasMps.MatrixMPowerSeriesLayer(5, input_shape=(2,10,10))
         ])
 
-    sgd = keras.optimizers.SGD(lr=0.1, decay=0.01, momentum=0.5, nesterov=True,clipnorm=100)
+    sgd = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM, nesterov=True,clipnorm=100)
     model.compile(optimizer=sgd,
               loss='mse')
 
-    model.fit(kdata, klabels, epochs=1000, batch_size=128)
+    model.fit(kdata, klabels, epochs=epochs, batch_size=128)
     print(model.evaluate(ktest_data, ktest_labels, batch_size=128))
 
     return model
 
 
-def test_id_m():
+def test_id_m(epochs=1000):
     data = np.vectorize(complex)(np.random.random((1000,10,10)),np.random.random((1000,10,10)))*2-1-1j
     labels = data
 
@@ -245,24 +248,24 @@ def test_id_m():
     ktest_labels = np.array(list(map(lambda x: [x.real, x.imag], test_labels)))
 
     model = Sequential([
-        KerasMps.MatrixPowerSeriesLayer(5, input_shape=(2,10,10))
+        KerasMps.MatrixMPowerSeriesLayer(5, input_shape=(2,10,10))
         ])
 
-    sgd = keras.optimizers.SGD(lr=0.1, decay=0.01, momentum=0.5, nesterov=True,clipnorm=100)
+    sgd = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM, nesterov=True,clipnorm=100)
     model.compile(optimizer=sgd,
               loss='mse')
 
-    model.fit(kdata, klabels, epochs=1000, batch_size=128)
+    model.fit(kdata, klabels, epochs=epochs, batch_size=128)
     print(model.evaluate(ktest_data, ktest_labels, batch_size=128))
 
     return model
 
 
-def test_square_m():
+def test_square_m(epochs=1000):
     data = np.vectorize(complex)(np.random.random((1000,10,10)),np.random.random((1000,10,10)))*2-1-1j
     labels = []
     for datum in data:
-        labels.append(datum.dot(datum))
+        labels.append(np.matmul(datum, datum))
     labels = np.array(labels)
 
     kdata = np.array(list(map(lambda x: [x.real, x.imag], data)))
@@ -271,27 +274,27 @@ def test_square_m():
     test_data = np.vectorize(complex)(np.random.random((100,10,10)),np.random.random((100,10,10)))*2-1-1j
     test_labels = []
     for datum in test_data:
-        test_labels.append(datum.dot(datum))
+        test_labels.append(np.matmul(datum, datum))
     test_labels = np.array(test_labels)
 
     ktest_data = np.array(list(map(lambda x: [x.real, x.imag], test_data)))
     ktest_labels = np.array(list(map(lambda x: [x.real, x.imag], test_labels)))
 
     model = Sequential([
-        KerasMps.MatrixPowerSeriesLayer(5, input_shape=(2,10,10))
+        KerasMps.MatrixMPowerSeriesLayer(5, input_shape=(2,10,10))
         ])
 
-    sgd = keras.optimizers.SGD(lr=0.1, decay=0.01, momentum=0.5, nesterov=True,clipnorm=100)
+    sgd = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM, nesterov=True,clipnorm=100)
     model.compile(optimizer=sgd,
               loss='mse')
 
-    model.fit(kdata, klabels, epochs=1000, batch_size=16)
-    print(model.evaluate(ktest_data, ktest_labels, batch_size=10))
+    model.fit(kdata, klabels, epochs=epochs, batch_size=128)
+    print(model.evaluate(ktest_data, ktest_labels, batch_size=128))
 
     return model
 
 
-def test_exp_m():
+def test_exp_m(epochs=1000):
     data = np.vectorize(complex)(np.random.random((1000,10,10)),np.random.random((1000,10,10)))*2-1-1j
     labels = []
     for datum in data:
@@ -311,14 +314,14 @@ def test_exp_m():
     ktest_labels = np.array(list(map(lambda x: [x.real, x.imag], test_labels)))
 
     model = Sequential([
-        KerasMps.MatrixPowerSeriesLayer(5, input_shape=(2,10,10))
+        KerasMps.MatrixMPowerSeriesLayer(5, input_shape=(2,10,10))
         ])
 
-    sgd = keras.optimizers.SGD(lr=0.1, decay=0.01, momentum=0.5, nesterov=True,clipnorm=100)
+    sgd = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM, nesterov=True,clipnorm=100)
     model.compile(optimizer=sgd,
               loss='mse')
 
-    model.fit(kdata, klabels, epochs=1000, batch_size=16)
-    print(model.evaluate(ktest_data, ktest_labels, batch_size=10))
+    model.fit(kdata, klabels, epochs=epochs, batch_size=128)
+    print(model.evaluate(ktest_data, ktest_labels, batch_size=128))
 
     return model
