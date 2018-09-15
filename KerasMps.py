@@ -16,6 +16,7 @@ def factorial_decaying_random_init(shape):
 
     return res
 
+# Scalar coefficient
 class MatrixPowerSeriesLayer(Layer):
     def __init__(self, length, **kwrags):
         assert length > 1
@@ -78,6 +79,7 @@ def factorial_decaying_random_initM(shape):
     return res
 
 
+# Matrix coeffecients
 class MatrixMPowerSeriesLayer(Layer):
     def __init__(self, length, **kwrags):
         assert length > 1
