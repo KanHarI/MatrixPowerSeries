@@ -7,6 +7,7 @@ import random
 import math
 
 def factorial_decaying_random_init(shape):
+    # Decay by one over factorial, inspired by the taylor expansion of the exponent function
     res = np.zeros(shape)
     for i in range(shape[0]):
         radius = random.random() / math.factorial(i)
@@ -16,7 +17,10 @@ def factorial_decaying_random_init(shape):
 
     return res
 
-# Scalar coefficient
+# This layer represets a power series
+# a0*I+a1*X+a2*X^2+...+an*X^n
+# Where X is a complex input matrix, and the coefficients a_n are complex.
+# The optimized weights of this layer are the coefficients
 class MatrixPowerSeriesLayer(Layer):
     def __init__(self, length, **kwrags):
         assert length > 1
@@ -33,27 +37,35 @@ class MatrixPowerSeriesLayer(Layer):
         super().build(input_shape)
 
     def call(self, x):
-
+        # Extract the real and imaginary parts of the input matrix
         x_real = x[:,0]
         x_imag = x[:,1]
 
-        tmp_real = x_real
-        tmp_imag = x_imag
+        # tmp is used as the matrix raised to the n^th power
+        tmp_real = tf.zeros_like(x_real) + self.unit
+        tmp_imag = tf.zeros_like(x_imag)
 
+        # Find real and imaginary coefficients of the power series
         coff_real = self.coefficients[:,0]
         coff_imag = self.coefficients[:,1]
 
-        res_real = self.unit * coff_real[0] + tmp_real * coff_real[1] - tmp_imag * coff_imag[1]
-        res_imag = self.unit * coff_imag[0] + tmp_real * coff_imag[1] + tmp_imag * coff_real[1]
+        # Initialize with the zeorth power of the series
+        res_real = self.unit * coff_real[0]
+        res_imag = self.unit * coff_imag[0]
         
-        for i in range(2, self.length):
+        for i in range(1, self.length):
+            # Calculate a raise by one of the current power of the matrix
+            # Remainder: (a+bj)(c+dj)=(ac-bd)+(ad+bc)j, and the same 
+            # formulas hold for matrices
             new_tmp_real = tf.einsum('ijk,ikl->ijl', tmp_real, x_real) - tf.einsum('ijk,ikl->ijl', tmp_imag, x_imag)
             tmp_imag = tf.einsum('ijk,ikl->ijl', tmp_real, x_imag) + tf.einsum('ijk,ikl->ijl', tmp_imag, x_real)
             tmp_real = new_tmp_real
 
+            # Update the result with the current element of the power series
             res_real += tmp_real * coff_real[i] - tmp_imag * coff_imag[i]
             res_imag += tmp_imag * coff_real[i] + tmp_real * coff_imag[i]
 
+        # Unite real and complex parts into a 2 dimensional tensor
         res = tf.stack([res_real, res_imag], axis=1)
         return res
 
@@ -63,23 +75,33 @@ class MatrixPowerSeriesLayer(Layer):
 
 
 def factorial_decaying_random_initM(shape):
-    print(shape)
     res = np.zeros(shape)
     for i in range(shape[0]): # length
+        # initiate matrix as a random multiple of the unit matrix
         radius = random.random() / math.factorial(i)
         theta = random.random() * 2 * math.pi
         res[i,0,:,:] = radius * math.cos(theta) * np.identity(shape[2])
         res[i,1,:,:] = radius * math.sin(theta) * np.identity(shape[2])
         for k in range(shape[2]):
             for l in range(shape[3]):
-                radius = random.random() / (math.factorial(i)**2 * 5)
+                # Add noise to initial matrix
+                radius = random.random() / ((math.factorial(i)+1)**2)
                 theta = random.random() * 2 * math.pi
                 res[i,0,k,l] += radius*math.cos(theta)
                 res[i,1,k,l] += radius*math.sin(theta)
     return res
 
+def multi_factorial_decaying_random_initM(shape):
+    res = []
+    for i in range(shape[0]):
+        res.append(factorial_decaying_random_initM(shape[1:]))
+    return np.array(res)
 
-# Matrix coeffecients
+
+# This layer represets a power series
+# A0*I*B0+A1*X*B1+A2*X^2*B2+...+An*X^n*Bn
+# Where X is a complex input matrix, and the coefficients An, Bn are complex matrices.
+# The optimized weights of this layer are the coefficients
 class MatrixMPowerSeriesLayer(Layer):
     def __init__(self, length, **kwrags):
         assert length > 1
@@ -88,10 +110,12 @@ class MatrixMPowerSeriesLayer(Layer):
 
 
     def build(self, input_shape):
-        self.coefficients = self.add_weight(name='coefficients',
-                                            shape=(self.length,*input_shape[1:]),
-                                            initializer=factorial_decaying_random_initM,
+        self.lrcoefficients = self.add_weight(name='lrcoefficients',
+                                            shape=(self.length,2,*input_shape[1:]),
+                                            initializer=multi_factorial_decaying_random_initM,
                                             trainable=True)
+        self.lcoefficients = self.lrcoefficients[:,0]
+        self.rcoefficients = self.lrcoefficients[:,1]
         self.unit = K.eye(input_shape[2])
         super().build(input_shape)
 
@@ -100,24 +124,36 @@ class MatrixMPowerSeriesLayer(Layer):
         x_real = x[:,0]
         x_imag = x[:,1]
 
-        tmp_real = x_real
-        tmp_imag = x_imag
+        tmp_real = tf.zeros_like(x_real) + self.unit
+        tmp_imag = tf.zeros_like(x_imag)
 
-        coff_real = self.coefficients[:,0]
-        coff_imag = self.coefficients[:,1]
+        # The coefficient matrices
+        rcoff_real = self.rcoefficients[:,0]
+        rcoff_imag = self.rcoefficients[:,1]
+        lcoff_real = self.lcoefficients[:,0]
+        lcoff_imag = self.lcoefficients[:,1]
 
-        res_real = tf.einsum('ij,jk->ik',self.unit, coff_real[0])
-        res_real += tf.einsum('ijk,kl->ijl', tmp_real, coff_real[1]) - tf.einsum('ijk,kl->ijl', tmp_imag, coff_imag[1])
-        res_imag = tf.einsum('ij,jk->ik',self.unit, coff_imag[0])
-        res_imag += tf.einsum('ijk,kl->ijl', tmp_real, coff_imag[1]) + tf.einsum('ijk,kl->ijl', tmp_imag, coff_real[1])
+        # The multiplication of both left and right coefficients
+        res_real = tf.einsum(
+            'ij,jl->il',
+            lcoff_real[1],
+            tf.einsum('jk,kl->jl', self.unit, rcoff_real[0]))
+        res_imag = tf.einsum(
+            'ij,jl->il',
+            lcoff_imag[1],
+            tf.einsum('jk,kl->jl', self.unit, rcoff_imag[0]))
         
-        for i in range(2, self.length):
+        for i in range(1, self.length):
             new_tmp_real = tf.einsum('ijk,ikl->ijl', tmp_real, x_real) - tf.einsum('ijk,ikl->ijl', tmp_imag, x_imag)
             tmp_imag = tf.einsum('ijk,ikl->ijl', tmp_real, x_imag) + tf.einsum('ijk,ikl->ijl', tmp_imag, x_real)
             tmp_real = new_tmp_real
 
-            res_real += tf.einsum('ijk,kl->ijl', tmp_real, coff_real[i]) - tf.einsum('ijk,kl->ijl', tmp_imag, coff_imag[i])
-            res_imag += tf.einsum('ijk,kl->ijl', tmp_real, coff_imag[i]) - tf.einsum('ijk,kl->ijl', tmp_imag, coff_real[i])
+            # Temporary results of right multiplication only to keep line length managable
+            rmul_real = tf.einsum('ijk,kl->ijl', tmp_real, rcoff_real[i]) - tf.einsum('ijk,kl->ijl', tmp_imag, rcoff_imag[i])
+            rmul_imag = tf.einsum('ijk,kl->ijl', tmp_real, rcoff_imag[i]) + tf.einsum('ijk,kl->ijl', tmp_imag, rcoff_real[i])
+
+            res_real += tf.einsum('jk,ikl->ijl', lcoff_real[i], rmul_real) - tf.einsum('jk,ikl->ijl', lcoff_imag[i], rmul_imag)
+            res_imag += tf.einsum('jk,ikl->ijl', lcoff_imag[i], rmul_real) + tf.einsum('jk,ikl->ijl', lcoff_real[i], rmul_imag)
 
         res = tf.stack([res_real, res_imag], axis=1)
         return res
@@ -125,4 +161,4 @@ class MatrixMPowerSeriesLayer(Layer):
     def compute_output_shape(self, input_shape):
         return input_shape
 
-
+# TODO: add support for multiple input and output channels
