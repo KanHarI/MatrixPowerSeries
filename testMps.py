@@ -7,22 +7,30 @@ import keras
 import KerasMps
 
 LR = 0.5
-DECAY = 0.1
+DECAY = 0.2
 BATCH_SIZE = 256
 
-def generic_test_scalar(func, layer, epochs=1000, samples=1000, test_samples=100, matrix_size=10, degree=5):
+# func - the function approximation being tested
+# layer - the layer being tested
+def generic_test_scalar(func, layer, epochs=100, samples=10000, test_samples=100, matrix_size=10, degree=5):
+    # Creating training dataset
+    # Initialize source matrix with random elements in the [-1,-1j]X[1,1j]
+    # square on the complex plane
     data = np.vectorize(complex)(
         np.random.random((samples,matrix_size,matrix_size)),
         np.random.random((samples,matrix_size,matrix_size)))*2-1-1j
 
+    # Calculate expected results
     labels = []
     for datum in data:
         labels.append(func(datum))
     labels = np.array(labels)
 
+    # Seprate into real and complex parts
     kdata = np.array(list(map(lambda x: [x.real, x.imag], data)))
     klabels = np.array(list(map(lambda x: [x.real, x.imag], labels)))
     
+    # Craeting test dataset in the same way
     test_data = np.vectorize(complex)(
         np.random.random((test_samples,matrix_size,matrix_size)),
         np.random.random((test_samples,matrix_size,matrix_size)))*2-1-1j
@@ -35,6 +43,7 @@ def generic_test_scalar(func, layer, epochs=1000, samples=1000, test_samples=100
     ktest_data = np.array(list(map(lambda x: [x.real, x.imag], test_data)))
     ktest_labels = np.array(list(map(lambda x: [x.real, x.imag], test_labels)))
 
+    # Create model
     model = Sequential([
         layer(degree, input_shape=(2,matrix_size,matrix_size))
         ])
