@@ -6,8 +6,8 @@ import keras
 
 import KerasMps
 
-LR = 0.5
-DECAY = 0.2
+LR = 1
+DECAY = 0.25
 BATCH_SIZE = 256
 
 # func - the function approximation being tested
@@ -68,3 +68,9 @@ test_unit_m = lambda **kwargs: generic_test_scalar(lambda x: np.identity(x.shape
 test_id_m = lambda **kwargs: generic_test_scalar(lambda x: x, KerasMps.MatrixMPowerSeriesLayer, **kwargs)
 test_square_m = lambda **kwargs: generic_test_scalar(lambda x: np.matmul(x,x), KerasMps.MatrixMPowerSeriesLayer, **kwargs)
 test_exp_m = lambda **kwargs: generic_test_scalar(lambda x: sp.linalg.expm(x), KerasMps.MatrixMPowerSeriesLayer, **kwargs)
+
+test_zero_m2 = lambda **kwargs: generic_test_scalar(lambda x: np.zeros(x.shape), KerasMps.MatrixM2PowerSeriesLayer, **kwargs)
+test_unit_m2 = lambda **kwargs: generic_test_scalar(lambda x: np.identity(x.shape[0]), KerasMps.MatrixM2PowerSeriesLayer, **kwargs)
+test_id_m2 = lambda **kwargs: generic_test_scalar(lambda x: x, KerasMps.MatrixM2PowerSeriesLayer, **kwargs)
+test_square_m2 = lambda **kwargs: generic_test_scalar(lambda x: np.matmul(x,x), KerasMps.MatrixM2PowerSeriesLayer, **kwargs)
+test_exp_m2 = lambda **kwargs: generic_test_scalar(lambda x: sp.linalg.expm(x), KerasMps.MatrixM2PowerSeriesLayer, **kwargs)
