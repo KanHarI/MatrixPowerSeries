@@ -63,14 +63,19 @@ test_id = lambda **kwargs: generic_test_scalar(lambda x: x, KerasMps.MatrixPower
 test_square = lambda **kwargs: generic_test_scalar(lambda x: np.matmul(x,x), KerasMps.MatrixPowerSeriesLayer, **kwargs)
 test_exp = lambda **kwargs: generic_test_scalar(lambda x: sp.linalg.expm(x), KerasMps.MatrixPowerSeriesLayer, **kwargs)
 
+# For some reason these converge much slower than the m2 variant
 test_zero_m = lambda **kwargs: generic_test_scalar(lambda x: np.zeros(x.shape), KerasMps.MatrixMPowerSeriesLayer, **kwargs)
 test_unit_m = lambda **kwargs: generic_test_scalar(lambda x: np.identity(x.shape[0]), KerasMps.MatrixMPowerSeriesLayer, **kwargs)
 test_id_m = lambda **kwargs: generic_test_scalar(lambda x: x, KerasMps.MatrixMPowerSeriesLayer, **kwargs)
 test_square_m = lambda **kwargs: generic_test_scalar(lambda x: np.matmul(x,x), KerasMps.MatrixMPowerSeriesLayer, **kwargs)
 test_exp_m = lambda **kwargs: generic_test_scalar(lambda x: sp.linalg.expm(x), KerasMps.MatrixMPowerSeriesLayer, **kwargs)
 
+# For some reason these converge much faster than the previous
 test_zero_m2 = lambda **kwargs: generic_test_scalar(lambda x: np.zeros(x.shape), KerasMps.MatrixM2PowerSeriesLayer, **kwargs)
 test_unit_m2 = lambda **kwargs: generic_test_scalar(lambda x: np.identity(x.shape[0]), KerasMps.MatrixM2PowerSeriesLayer, **kwargs)
 test_id_m2 = lambda **kwargs: generic_test_scalar(lambda x: x, KerasMps.MatrixM2PowerSeriesLayer, **kwargs)
 test_square_m2 = lambda **kwargs: generic_test_scalar(lambda x: np.matmul(x,x), KerasMps.MatrixM2PowerSeriesLayer, **kwargs)
 test_exp_m2 = lambda **kwargs: generic_test_scalar(lambda x: sp.linalg.expm(x), KerasMps.MatrixM2PowerSeriesLayer, **kwargs)
+
+
+# 

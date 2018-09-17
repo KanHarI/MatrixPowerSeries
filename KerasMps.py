@@ -65,7 +65,7 @@ class MatrixPowerSeriesLayer(Layer):
             res_real += tmp_real * coff_real[i] - tmp_imag * coff_imag[i]
             res_imag += tmp_imag * coff_real[i] + tmp_real * coff_imag[i]
 
-        # Unite real and complex parts into a 2 dimensional tensor
+        # Unite real and complex parts
         res = tf.stack([res_real, res_imag], axis=1)
         return res
 
@@ -92,7 +92,6 @@ def factorial_decaying_random_initM(shape):
     return res
 
 def multi_factorial_decaying_random_initM(shape):
-    print(shape)
     res = []
     for i in range(shape[0]):
         if len(shape[1:]) == 4:
@@ -133,8 +132,6 @@ class MatrixMPowerSeriesLayer(Layer):
         lcoff_real = self.lcoefficients[:,0]
         lcoff_imag = self.lcoefficients[:,1]
 
-        # The unit matrix is "transperent" in matrix multiplication, therefore - there
-        # is no need for both left and right coefficients
         res_real = tf.einsum('jk,kl->jl', lcoff_real[0], self.unit)
         res_imag = tf.einsum('jk,kl->jl', lcoff_imag[0], self.unit)
         
@@ -214,5 +211,72 @@ class MatrixM2PowerSeriesLayer(Layer):
         return input_shape
 
 
+def multi_factorial_decaying_random_init(shape):
+    res = []
+    for i in range(shape[0]):
+        if len(shape[1:]) == 3:
+            res.append(factorial_decaying_random_init(shape[1:]))
+        else:
+            res.append(multi_factorial_decaying_random_init(shape[1:]))
+    return np.array(res)
+
 class MultichannelMatrixPowerSeriesLayer(Layer):
-    pass
+    def __init__(self, length, out_channels, **kwrags):
+        assert length > 1
+        self.length = length
+        self.out_channels = out_channels
+        super().__init__(**kwrags)
+
+
+    def build(self, input_shape):
+        self.coefficients = self.add_weight(name='coefficients',
+                                            shape=(self.length,self.out_channels,2),
+                                            initializer=multi_factorial_decaying_random_init,
+                                            trainable=True)
+        self.unit = K.eye(input_shape[-1])
+        super().build(input_shape)
+
+    def call(self, x):
+        # convention:
+        # i is batch size
+        # j is output channels
+        # k is input channels
+        # l is 0/1 - real/complex part
+        # m,n are elements of the input matrix
+        # o - degree of polynomial
+
+        # This element ordering allows intuitive broadcasting
+        # x is now a tensor of dimension [i,k,l,m,n]
+
+        x_real = x[:,:,0]
+        x_imag = x[:,:,1]
+        # x_real/imag is a tensor of dimension [i,k,m,n]
+
+        # tmp is used as the matrix raised to the n^th power
+        tmp_real = tf.zeros_like(x_real) + self.unit
+        tmp_imag = tf.zeros_like(x_imag)
+        # tmp_real/imag is a tensor of dimension [i,k,m,n]
+
+        coff_real = self.coefficients[:,:,0]
+        coff_imag = self.coefficients[:,:,1]
+        # coff_real/imag is now a matrix [o,j]
+
+        res_real = tf.einsum('j,mn->jmn', coff_real[0], self.unit)
+        res_imag = tf.einsum('j,mn->jmn', coff_imag[0], self.unit)
+
+        
+        for o in range(1, self.length):
+            new_tmp_real = tf.einsum('ikmn,iknl->ikml', tmp_real, x_real) - tf.einsum('ikmn,iknl->ikml', tmp_imag, x_imag)
+            tmp_imag = tf.einsum('ikmn,iknl->ikml', tmp_real, x_imag) + tf.einsum('ikmn,iknl->ikml', tmp_imag, x_real)
+            tmp_real = new_tmp_real
+
+            # Update the result with the current element of the power series
+            res_real += tf.einsum('ikmn,j->ijkmn', tmp_real, coff_real[o]) - tf.einsum('ikmn,j->ijkmn', tmp_imag, coff_imag[o])
+            res_imag += tf.einsum('ikmn,j->ijkmn', tmp_imag, coff_real[o]) + tf.einsum('ikmn,j->ijkmn', tmp_real, coff_imag[o])
+
+        # Unite real and complex parts
+        res = tf.stack([res_real, res_imag], axis=3)
+        return res
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
