@@ -394,24 +394,24 @@ class MultichannelMatrixM2PowerSeriesLayer(Layer):
 
         # "tf.ones" is needed to raise dimension, this cannot be broadcasted later on
         # On the 0th degree, there is no need for both left and right coefficient
-        # so the right coefficient is discarded
-        res_real = tf.einsum('k,mt,jtn->jkmn', tf.ones((x.shape[1],)), self.unit, lcoff_real[0])
-        res_imag = tf.einsum('k,mt,jtn->jkmn', tf.ones((x.shape[1],)), self.unit, lcoff_imag[0])
+        # so the left coefficient is discarded
+        res_real = tf.einsum('k,mt,jtn->jkmn', tf.ones((x.shape[1],)), self.unit, rcoff_real[0])
+        res_imag = tf.einsum('k,mt,jtn->jkmn', tf.ones((x.shape[1],)), self.unit, rcoff_imag[0])
 
         
         for o in range(1, self.degree):
-            new_tmp_real = tf.einsum('ikmn,iknl->ikml', tmp_real, x_real) - tf.einsum('ikmn,iknl->ikml', tmp_imag, x_imag)
-            tmp_imag = tf.einsum('ikmn,iknl->ikml', tmp_real, x_imag) + tf.einsum('ikmn,iknl->ikml', tmp_imag, x_real)
+            new_tmp_real = tf.einsum('ikmt,iktn->ikmn', tmp_real, x_real) - tf.einsum('ikmt,iktn->ikmn', tmp_imag, x_imag)
+            tmp_imag = tf.einsum('ikmt,iktn->ikmn', tmp_real, x_imag) + tf.einsum('ikmt,iktn->ikmn', tmp_imag, x_real)
             tmp_real = new_tmp_real
 
             # Multiply by right coefficient
             # Temporary results of right multiplication only to keep line degree managable
-            rmul_real = tf.einsum('ikml,kl->ijl', tmp_real, rcoff_real[i]) - tf.einsum('ijk,kl->ijl', tmp_imag, rcoff_imag[i])
-            rmul_imag = tf.einsum('ikml,kl->ijl', tmp_real, rcoff_imag[i]) + tf.einsum('ijk,kl->ijl', tmp_imag, rcoff_real[i])
+            rmul_real = tf.einsum('ikmt,jtn->ijkmn', tmp_real, rcoff_real[o]) - tf.einsum('ikmt,jtn->ijkmn', tmp_imag, rcoff_imag[o])
+            rmul_imag = tf.einsum('ikmt,jtn->ijkmn', tmp_real, rcoff_imag[o]) + tf.einsum('ikmt,jtn->ijkmn', tmp_imag, rcoff_real[o])
 
             # Multiply by left coefficient
-            res_real += tf.einsum('jk,ikl->ijl', lcoff_real[i], rmul_real) - tf.einsum('jk,ikl->ijl', lcoff_imag[i], rmul_imag)
-            res_imag += tf.einsum('jk,ikl->ijl', lcoff_imag[i], rmul_real) + tf.einsum('jk,ikl->ijl', lcoff_real[i], rmul_imag)
+            res_real += tf.einsum('jmt,ijktn->ijkmn', lcoff_real[o], rmul_real) - tf.einsum('jmt,ijktn->ijkmn', lcoff_imag[o], rmul_imag)
+            res_imag += tf.einsum('jmt,ijktn->ijkmn', lcoff_imag[o], rmul_real) + tf.einsum('jmt,ijktn->ijkmn', lcoff_real[o], rmul_imag)
 
         # Unite real and complex parts
         res = tf.stack([res_real, res_imag], axis=3)
