@@ -220,6 +220,7 @@ def multi_factorial_decaying_random_init(shape):
             res.append(multi_factorial_decaying_random_init(shape[1:]))
     return np.array(res)
 
+# This is the same as MatrixPowerSeriesLayer, only for multiple channels of input and output
 class MultichannelMatrixPowerSeriesLayer(Layer):
     def __init__(self, degree, out_channels, **kwrags):
         assert degree > 1
@@ -261,6 +262,7 @@ class MultichannelMatrixPowerSeriesLayer(Layer):
         coff_imag = self.coefficients[:,:,1]
         # coff_real/imag is now a matrix [o,j]
 
+        # "tf.ones" is needed to raise dimension, this cannot be broadcasted later on
         res_real = tf.einsum('j,k,mn->jkmn', coff_real[0], tf.ones((x.shape[1],)), self.unit)
         res_imag = tf.einsum('j,k,mn->jkmn', coff_imag[0], tf.ones((x.shape[1],)), self.unit)
 
@@ -280,3 +282,141 @@ class MultichannelMatrixPowerSeriesLayer(Layer):
 
     def compute_output_shape(self, input_shape):
         return (input_shape[0], self.out_channels, *input_shape[1:])
+
+
+# This is the same as MatrixMPowerSeriesLayer, only for multiple channels of input and output
+class MultichannelMatrixMPowerSeriesLayer(Layer):
+    def __init__(self, degree, out_channels, **kwrags):
+        assert degree > 1
+        self.degree = degree
+        self.out_channels = out_channels
+        super().__init__(**kwrags)
+
+
+    def build(self, input_shape):
+        self.lcoefficients = self.add_weight(name='coefficients',
+                                            shape=(self.degree,self.out_channels,2,*input_shape[-2:]),
+                                            initializer=multi_factorial_decaying_random_initM,
+                                            trainable=True)
+        self.unit = K.eye(input_shape[-1])
+        super().build(input_shape)
+
+    def call(self, x):
+        # convention:
+        # i is batch size
+        # j is output channels
+        # k is input channels
+        # l is 0/1 - real/complex part
+        # m,n,t are elements of matrices
+        # o - degree of polynomial
+
+        # This element ordering allows intuitive broadcasting
+        # x is now a tensor of dimension [i,k,l,m,n]
+
+        x_real = x[:,:,0]
+        x_imag = x[:,:,1]
+        # x_real/imag is a tensor of dimension [i,k,m,n]
+
+        # tmp is used as the matrix raised to the n^th power
+        tmp_real = tf.zeros_like(x_real) + self.unit
+        tmp_imag = tf.zeros_like(x_imag)
+        # tmp_real/imag is a tensor of dimension [i,k,m,n]
+
+        lcoff_real = self.lcoefficients[:,:,0]
+        lcoff_imag = self.lcoefficients[:,:,1]
+        # coff_real/imag is now a matrix [o,j,m,n]
+
+        # "tf.ones" is needed to raise dimension, this cannot be broadcasted later on
+        res_real = tf.einsum('k,mt,jtn->jkmn', tf.ones((x.shape[1],)), self.unit, lcoff_real[0])
+        res_imag = tf.einsum('k,mt,jtn->jkmn', tf.ones((x.shape[1],)), self.unit, lcoff_imag[0])
+
+        
+        for o in range(1, self.degree):
+            new_tmp_real = tf.einsum('ikmt,iktn->ikmn', tmp_real, x_real) - tf.einsum('ikmt,iktn->ikmn', tmp_imag, x_imag)
+            tmp_imag = tf.einsum('ikmt,iktn->ikmn', tmp_real, x_imag) + tf.einsum('ikmt,iktn->ikmn', tmp_imag, x_real)
+            tmp_real = new_tmp_real
+
+            # Update the result with the current element of the power series
+            res_real += tf.einsum('ikmt,jtn->ijkmn', tmp_real, lcoff_real[o]) - tf.einsum('ikmt,jtn->ijkmn', tmp_imag, lcoff_imag[o])
+            res_imag += tf.einsum('ikmt,jtn->ijkmn', tmp_imag, lcoff_real[o]) + tf.einsum('ikmt,jtn->ijkmn', tmp_real, lcoff_imag[o])
+
+        # Unite real and complex parts
+        res = tf.stack([res_real, res_imag], axis=3)
+        return res
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], self.out_channels, *input_shape[1:])
+
+
+# This is the same as MatrixM2PowerSeriesLayer, only for multiple channels of input and output
+class MultichannelMatrixM2PowerSeriesLayer(Layer):
+    def __init__(self, degree, out_channels, **kwrags):
+        assert degree > 1
+        self.degree = degree
+        self.out_channels = out_channels
+        super().__init__(**kwrags)
+
+
+    def build(self, input_shape):
+        self.lrcoefficients = self.add_weight(name='coefficients',
+                                            shape=(self.degree,self.out_channels,2,2,*input_shape[-2:]),
+                                            initializer=multi_factorial_decaying_random_initM,
+                                            trainable=True)
+        self.unit = K.eye(input_shape[-1])
+        super().build(input_shape)
+
+    def call(self, x):
+        # convention:
+        # i is batch size
+        # j is output channels
+        # k is input channels
+        # l is 0/1 - real/complex part
+        # m,n,t are elements of matrices
+        # o - degree of polynomial
+
+        # This element ordering allows intuitive broadcasting
+        # x is now a tensor of dimension [i,k,l,m,n]
+
+        x_real = x[:,:,0]
+        x_imag = x[:,:,1]
+        # x_real/imag is a tensor of dimension [i,k,m,n]
+
+        # tmp is used as the matrix raised to the n^th power
+        tmp_real = tf.zeros_like(x_real) + self.unit
+        tmp_imag = tf.zeros_like(x_imag)
+        # tmp_real/imag is a tensor of dimension [i,k,m,n]
+
+        lcoff_real = self.lrcoefficients[:,:,0,0]
+        lcoff_imag = self.lrcoefficients[:,:,0,1]
+        rcoff_real = self.lrcoefficients[:,:,1,0]
+        rcoff_imag = self.lrcoefficients[:,:,1,1]
+        # coff_real/imag is now a matrix [o,j,m,n]
+
+        # "tf.ones" is needed to raise dimension, this cannot be broadcasted later on
+        # On the 0th degree, there is no need for both left and right coefficient
+        # so the right coefficient is discarded
+        res_real = tf.einsum('k,mt,jtn->jkmn', tf.ones((x.shape[1],)), self.unit, lcoff_real[0])
+        res_imag = tf.einsum('k,mt,jtn->jkmn', tf.ones((x.shape[1],)), self.unit, lcoff_imag[0])
+
+        
+        for o in range(1, self.degree):
+            new_tmp_real = tf.einsum('ikmn,iknl->ikml', tmp_real, x_real) - tf.einsum('ikmn,iknl->ikml', tmp_imag, x_imag)
+            tmp_imag = tf.einsum('ikmn,iknl->ikml', tmp_real, x_imag) + tf.einsum('ikmn,iknl->ikml', tmp_imag, x_real)
+            tmp_real = new_tmp_real
+
+            # Multiply by right coefficient
+            # Temporary results of right multiplication only to keep line degree managable
+            rmul_real = tf.einsum('ikml,kl->ijl', tmp_real, rcoff_real[i]) - tf.einsum('ijk,kl->ijl', tmp_imag, rcoff_imag[i])
+            rmul_imag = tf.einsum('ikml,kl->ijl', tmp_real, rcoff_imag[i]) + tf.einsum('ijk,kl->ijl', tmp_imag, rcoff_real[i])
+
+            # Multiply by left coefficient
+            res_real += tf.einsum('jk,ikl->ijl', lcoff_real[i], rmul_real) - tf.einsum('jk,ikl->ijl', lcoff_imag[i], rmul_imag)
+            res_imag += tf.einsum('jk,ikl->ijl', lcoff_imag[i], rmul_real) + tf.einsum('jk,ikl->ijl', lcoff_real[i], rmul_imag)
+
+        # Unite real and complex parts
+        res = tf.stack([res_real, res_imag], axis=3)
+        return res
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], self.out_channels, *input_shape[1:])
+

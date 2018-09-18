@@ -108,7 +108,7 @@ def multichannel_generate_samples(func, matrix_size, input_channels, samples):
 def generic_multichannel_test(func,
                             layer,
                             out_channels,
-                            input_channels=5,
+                            input_channels=7,
                             epochs=100,
                             samples=1000,
                             test_samples=100,
@@ -133,10 +133,22 @@ def generic_multichannel_test(func,
 
     return (model.evaluate(test_data, test_labels, batch_size=batch_size), model)
 
-zero_unit_id_square = lambda x: np.array([zero(x),unit(x),identity(x),square(x)])
+zero_unit_id_square = lambda x: np.array([zero(x),unit(x),identity(x),square(x),expm(x)])
 
 test_multichannel = lambda **kwargs: generic_multichannel_test(
     func=zero_unit_id_square,
     layer=KerasMps.MultichannelMatrixPowerSeriesLayer,
-    out_channels=4,
+    out_channels=5,
+    **kwargs)
+
+test_multichannel_m = lambda **kwargs: generic_multichannel_test(
+    func=zero_unit_id_square,
+    layer=KerasMps.MultichannelMatrixMPowerSeriesLayer,
+    out_channels=5,
+    **kwargs)
+
+test_multichannel_m2 = lambda **kwargs: generic_multichannel_test(
+    func=zero_unit_id_square,
+    layer=KerasMps.MultichannelMatrixMPowerSeriesLayer,
+    out_channels=5,
     **kwargs)
