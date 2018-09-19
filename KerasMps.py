@@ -71,6 +71,7 @@ class MatrixPowerSeriesLayer(Layer):
 
     def compute_output_shape(self, input_shape):
         return input_shape
+MPS = MatrixPowerSeriesLayer
 
 
 
@@ -149,6 +150,8 @@ class MatrixMPowerSeriesLayer(Layer):
 
     def compute_output_shape(self, input_shape):
         return input_shape
+MMPS = MatrixMPowerSeriesLayer
+
 
 # This layer represets a power series
 # A_0*I*B_0 + A_1*X*B_1 + A_2*X^2*B_2 + ... + A_n*X^n*B_n
@@ -209,7 +212,7 @@ class MatrixM2PowerSeriesLayer(Layer):
 
     def compute_output_shape(self, input_shape):
         return input_shape
-
+MM2PS = MatrixM2PowerSeriesLayer
 
 def multi_factorial_decaying_random_init(shape):
     res = []
@@ -282,7 +285,7 @@ class MultichannelMatrixPowerSeriesLayer(Layer):
 
     def compute_output_shape(self, input_shape):
         return (input_shape[0], self.out_channels, *input_shape[1:])
-
+MchMPS = MultichannelMatrixPowerSeriesLayer
 
 # This is the same as MatrixMPowerSeriesLayer, only for multiple channels of input and output
 class MultichannelMatrixMPowerSeriesLayer(Layer):
@@ -346,7 +349,7 @@ class MultichannelMatrixMPowerSeriesLayer(Layer):
 
     def compute_output_shape(self, input_shape):
         return (input_shape[0], self.out_channels, *input_shape[1:])
-
+MchMMPS = MultichannelMatrixMPowerSeriesLayer
 
 # This is the same as MatrixM2PowerSeriesLayer, only for multiple channels of input and output
 class MultichannelMatrixM2PowerSeriesLayer(Layer):
@@ -419,4 +422,4 @@ class MultichannelMatrixM2PowerSeriesLayer(Layer):
 
     def compute_output_shape(self, input_shape):
         return (input_shape[0], self.out_channels, *input_shape[1:])
-
+MchMM2PS = MultichannelMatrixM2PowerSeriesLayer
