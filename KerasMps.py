@@ -20,7 +20,9 @@ def factorial_decaying_random_init(shape):
 # This layer represets a power series
 # a_0*I+a_1*X+a_2*X^2+...+a_n*X^n
 # Where X is a complex input matrix, and the coefficients a_n are complex.
-# The optimized weights of this layer are the coefficients
+# The optimized weights of this layer are the coefficients.
+# Input shape: [?(batch_size), 2(0=real\1=imag), n, n] (n is the size of input matrices)
+# Output shape: same as input
 class MatrixPowerSeriesLayer(Layer):
     def __init__(self, degree, **kwrags):
         assert degree > 1
@@ -223,7 +225,10 @@ def multi_factorial_decaying_random_init(shape):
             res.append(multi_factorial_decaying_random_init(shape[1:]))
     return np.array(res)
 
-# This is the same as MatrixPowerSeriesLayer, only for multiple channels of input and output
+# This is the same as MatrixPowerSeriesLayer, only for multiple channels of input and output.
+# Input shape: [?(batch_size), k(input channels), 2(0=real\1=imag), n, n]
+# Output shape: [?(batch_size), j(output channel), k(input channels), 2(0=real\1=imag), n, n]
+# Calculates the same computations for every input channel in parallel
 class MultichannelMatrixPowerSeriesLayer(Layer):
     def __init__(self, degree, out_channels, **kwrags):
         assert degree > 1

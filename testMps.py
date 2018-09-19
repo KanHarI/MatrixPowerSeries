@@ -13,13 +13,7 @@ LR = 1
 DECAY = 0.01
 MOMENTUM = 0.9
 
-def tensor_logcosh(y_true, y_pred):
-    def _logcosh(x):
-        return x + K.softplus(-2. * x) - K.log(2.)
-
-    result = tf.reduce_mean(_logcosh(y_pred - y_true), list(range(1,len(y_pred.shape))))
-    return result
-
+OPTIMIZER = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM)
 
 def generate_samples(func, matrix_size, samples):
     # Initialize source matrix with random elements in the [-1,-1j]X[1,1j]
@@ -52,10 +46,8 @@ def generic_test_scalar(func, layer, epochs=100, samples=4000, test_samples=100,
         layer(degree=degree, input_shape=(2,matrix_size,matrix_size))
         ])
 
-    opt = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM)
-
-    model.compile(optimizer=opt,
-                    loss=tensor_logcosh)
+    model.compile(optimizer=OPTIMIZER,
+                    loss='logcosh')
     model.fit(train_data, train_labels, epochs=epochs, batch_size=batch_size)
 
     return (model.evaluate(test_data, test_labels, batch_size=batch_size), model)
@@ -153,9 +145,8 @@ def generic_multichannel_test(func,
         # output_shape: [j,k,l,m,n]
         ])
 
-    opt = keras.optimizers.SGD(lr=LR, decay=DECAY, momentum=MOMENTUM)
-    model.compile(optimizer=opt,
-                    loss=tensor_logcosh)
+    model.compile(optimizer=OPTIMIZER,
+                    loss='logcosh')
     model.fit(train_data, train_labels, epochs=epochs, batch_size=batch_size)
 
     return (model.evaluate(test_data, test_labels, batch_size=batch_size), model)
