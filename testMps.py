@@ -7,7 +7,7 @@ import keras.backend as K
 import tensorflow as tf
 import copy
 
-from KerasMps import MPS, MMPS, MM2PS, MchMPS, MchMMPS, MchMM2PS
+import KerasMps
 
 LR = 1
 DECAY = 0.01
@@ -71,29 +71,29 @@ def bold(x):
     return x
 
 
-test_zero = lambda **kwargs: generic_test_scalar(zero, MPS, **kwargs)
-test_unit = lambda **kwargs: generic_test_scalar(unit, MPS, **kwargs)
-test_id = lambda **kwargs: generic_test_scalar(identity, MPS, **kwargs)
-test_square = lambda **kwargs: generic_test_scalar(square, MPS, **kwargs)
-test_cube = lambda **kwargs: generic_test_scalar(cube, MPS, **kwargs)
-test_exp = lambda **kwargs: generic_test_scalar(expm, MPS, **kwargs)
-test_bold = lambda **kwargs: generic_test_scalar(bold, MPS, **kwargs)
+test_zero = lambda **kwargs: generic_test_scalar(zero, KerasMps.MPS, **kwargs)
+test_unit = lambda **kwargs: generic_test_scalar(unit, KerasMps.MPS, **kwargs)
+test_id = lambda **kwargs: generic_test_scalar(identity, KerasMps.MPS, **kwargs)
+test_square = lambda **kwargs: generic_test_scalar(square, KerasMps.MPS, **kwargs)
+test_cube = lambda **kwargs: generic_test_scalar(cube, KerasMps.MPS, **kwargs)
+test_exp = lambda **kwargs: generic_test_scalar(expm, KerasMps.MPS, **kwargs)
+test_bold = lambda **kwargs: generic_test_scalar(bold, KerasMps.MPS, **kwargs)
 
-test_zero_m = lambda **kwargs: generic_test_scalar(zero, MMPS, **kwargs)
-test_unit_m = lambda **kwargs: generic_test_scalar(unit, MMPS, **kwargs)
-test_id_m = lambda **kwargs: generic_test_scalar(identity, MMPS, **kwargs)
-test_square_m = lambda **kwargs: generic_test_scalar(square, MMPS, **kwargs)
-test_cube_m = lambda **kwargs: generic_test_scalar(cube, MMPS, **kwargs)
-test_exp_m = lambda **kwargs: generic_test_scalar(expm, MMPS, **kwargs)
-test_bold_m = lambda **kwargs: generic_test_scalar(bold, MMPS, **kwargs)
+test_zero_m = lambda **kwargs: generic_test_scalar(zero, KerasMps.MMPS, **kwargs)
+test_unit_m = lambda **kwargs: generic_test_scalar(unit, KerasMps.MMPS, **kwargs)
+test_id_m = lambda **kwargs: generic_test_scalar(identity, KerasMps.MMPS, **kwargs)
+test_square_m = lambda **kwargs: generic_test_scalar(square, KerasMps.MMPS, **kwargs)
+test_cube_m = lambda **kwargs: generic_test_scalar(cube, KerasMps.MMPS, **kwargs)
+test_exp_m = lambda **kwargs: generic_test_scalar(expm, KerasMps.MMPS, **kwargs)
+test_bold_m = lambda **kwargs: generic_test_scalar(bold, KerasMps.MMPS, **kwargs)
 
-test_zero_m2 = lambda **kwargs: generic_test_scalar(zero, MM2PS, **kwargs)
-test_unit_m2 = lambda **kwargs: generic_test_scalar(unit, MM2PS, **kwargs)
-test_id_m2 = lambda **kwargs: generic_test_scalar(identity, MM2PS, **kwargs)
-test_square_m2 = lambda **kwargs: generic_test_scalar(square, MM2PS, **kwargs)
-test_cube_m2 = lambda **kwargs: generic_test_scalar(cube, MM2PS, **kwargs)
-test_exp_m2 = lambda **kwargs: generic_test_scalar(expm, MM2PS, **kwargs)
-test_bold_m2 = lambda **kwargs: generic_test_scalar(bold, MM2PS, **kwargs)
+test_zero_m2 = lambda **kwargs: generic_test_scalar(zero, KerasMps.MM2PS, **kwargs)
+test_unit_m2 = lambda **kwargs: generic_test_scalar(unit, KerasMps.MM2PS, **kwargs)
+test_id_m2 = lambda **kwargs: generic_test_scalar(identity, KerasMps.MM2PS, **kwargs)
+test_square_m2 = lambda **kwargs: generic_test_scalar(square, KerasMps.MM2PS, **kwargs)
+test_cube_m2 = lambda **kwargs: generic_test_scalar(cube, KerasMps.MM2PS, **kwargs)
+test_exp_m2 = lambda **kwargs: generic_test_scalar(expm, KerasMps.MM2PS, **kwargs)
+test_bold_m2 = lambda **kwargs: generic_test_scalar(bold, KerasMps.MM2PS, **kwargs)
 
 
 # convention:
@@ -162,14 +162,14 @@ def make_test_multi(func, layer, out_channels, **kwargs):
                                 out_channels=out_channels,
                                 **kwargs)
 
-test_multichannel = make_test_multi(zero_id_unit, MchMPS, 3)
-test_multichannel_nonlin = make_test_multi(square_exp_cube, MchMPS, 3)
-test_multichannel_bold = make_test_multi(bold_2, MchMPS, 2)
+test_multichannel = make_test_multi(zero_id_unit, KerasMps.MchMPS, 3)
+test_multichannel_nonlin = make_test_multi(square_exp_cube, KerasMps.MchMPS, 3)
+test_multichannel_bold = make_test_multi(bold_2, KerasMps.MchMPS, 2)
 
-test_multichannel_m = make_test_multi(zero_id_unit, MchMMPS, 3)
-test_multichannel_nonlin_m = make_test_multi(square_exp_cube, MchMMPS, 3)
-test_multichannel_bold_m = make_test_multi(bold_2, MchMMPS, 2)
+test_multichannel_m = make_test_multi(zero_id_unit, KerasMps.MchMMPS, 3)
+test_multichannel_nonlin_m = make_test_multi(square_exp_cube, KerasMps.MchMMPS, 3)
+test_multichannel_bold_m = make_test_multi(bold_2, KerasMps.MchMMPS, 2)
 
-test_multichannel_m2 = make_test_multi(zero_id_unit, MchMM2PS, 3)
-test_multichannel_nonlin_m2 = make_test_multi(square_exp_cube, MchMM2PS, 3)
-test_multichannel_bold_m2 = make_test_multi(bold_2, MchMM2PS, 2)
+test_multichannel_m2 = make_test_multi(zero_id_unit, KerasMps.MchMM2PS, 3)
+test_multichannel_nonlin_m2 = make_test_multi(square_exp_cube, KerasMps.MchMM2PS, 3)
+test_multichannel_bold_m2 = make_test_multi(bold_2, KerasMps.MchMM2PS, 2)

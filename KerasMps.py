@@ -6,6 +6,61 @@ import numpy as np
 import random
 import math
 
+class ComplexTensor:
+    def __init__(self, tensor, split_axis=-3):
+        if isinstance(tensor, list):
+            self.real = tensor[0]
+            self.imag = tensor[1]
+        else:
+            # Assume this is a tensorflow tensor -
+            # there are too many types of those to check manually
+            self.real, self.imag = tf.split(tensor, [1,1], axis=split_axis)
+            self.real = tf.squeeze(self.real, axis=split_axis)
+            self.imag = tf.squeeze(self.imag, axis=split_axis)
+        self.dim = len(self.real.shape)
+
+
+    @classmethod
+    def unit_like(cls, compTens, merge_axis=-3):
+        imag = tf.zeros_like(compTens.imag)
+        real = tf.zeros_like(compTens.real)
+        real += tf.eye(int(compTens.real.shape[-1]))
+        return cls([real, imag])
+
+    def __getitem__(self, val):
+        real = self.real[val]
+        imag = self.imag[val]
+        return ComplexTensor([real, imag])
+
+    def __iadd__(self, other):
+        self.real += other.real
+        self.imag += other.imag
+        return self
+
+    def __add__(self, other):
+        real = self.real+other.real
+        imag = self.imag+other.imag
+        return ComplexTensor([real, imag])
+
+    def __imul__(self, other):
+        assert other.dim == 0
+        tmp = self.real*other.real - self.imag*other.imag
+        self.imag = self.real*other.imag + self.imag*other.real
+        self.real = tmp
+        return self
+
+    def __mul__(self, other):
+        assert other.dim == 0
+        real = self.real*other.real - self.imag*other.imag
+        imag = self.real*other.imag + self.imag*other.real
+        return ComplexTensor([real, imag])
+
+def compEinsum(form, a, b, split_axis=-3):
+    real = tf.einsum(form, a.real, b.real) - tf.einsum(form, a.imag, b.imag)
+    imag = tf.einsum(form, a.real, b.imag) + tf.einsum(form, a.imag, b.real)
+    return ComplexTensor([real, imag])
+
+
 def factorial_decaying_random_init(shape):
     # Decay by one over factorial, inspired by the taylor expansion of the exponent function
     res = np.zeros(shape)
@@ -35,40 +90,38 @@ class MatrixPowerSeriesLayer(Layer):
                                             shape=(self.degree,2),
                                             initializer=factorial_decaying_random_init,
                                             trainable=True)
+        
+        self.coefficients=ComplexTensor(self.coefficients, split_axis=-1)
+
         self.unit = K.eye(input_shape[2])
         super().build(input_shape)
 
     def call(self, x):
         # Extract the real and imaginary parts of the input matrix
-        x_real = x[:,0]
-        x_imag = x[:,1]
+        x = ComplexTensor(x)
 
         # tmp is used as the matrix raised to the n^th power
-        tmp_real = tf.zeros_like(x_real) + self.unit
-        tmp_imag = tf.zeros_like(x_imag)
-
-        # Find real and imaginary coefficients of the power series
-        coff_real = self.coefficients[:,0]
-        coff_imag = self.coefficients[:,1]
+        tmp = ComplexTensor.unit_like(x)
 
         # Initialize with the zeorth power of the series
-        res_real = self.unit * coff_real[0]
-        res_imag = self.unit * coff_imag[0]
+        res = tmp*self.coefficients[0]
         
         for i in range(1, self.degree):
             # Calculate a raise by one of the current power of the matrix
             # Remainder: (a+bj)(c+dj)=(ac-bd)+(ad+bc)j, and the same 
             # formulas hold for matrices
-            new_tmp_real = tf.einsum('ijk,ikl->ijl', tmp_real, x_real) - tf.einsum('ijk,ikl->ijl', tmp_imag, x_imag)
-            tmp_imag = tf.einsum('ijk,ikl->ijl', tmp_real, x_imag) + tf.einsum('ijk,ikl->ijl', tmp_imag, x_real)
-            tmp_real = new_tmp_real
+            # new_tmp_real = tf.einsum('ijk,ikl->ijl', tmp_real, x_real) - tf.einsum('ijk,ikl->ijl', tmp_imag, x_imag)
+            # tmp_imag = tf.einsum('ijk,ikl->ijl', tmp_real, x_imag) + tf.einsum('ijk,ikl->ijl', tmp_imag, x_real)
+            # tmp_real = new_tmp_real
+            tmp = compEinsum('ijk,ikl->ijl', tmp, x)
 
             # Update the result with the current element of the power series
-            res_real += tmp_real * coff_real[i] - tmp_imag * coff_imag[i]
-            res_imag += tmp_imag * coff_real[i] + tmp_real * coff_imag[i]
+            print(type(res))
+            res += tmp*self.coefficients[i]
+            print(type(res))
 
         # Unite real and complex parts
-        res = tf.stack([res_real, res_imag], axis=1)
+        res = tf.stack([res.real, res.imag], axis=1)
         return res
 
     def compute_output_shape(self, input_shape):
